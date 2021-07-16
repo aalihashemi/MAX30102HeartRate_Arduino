@@ -1,28 +1,3 @@
-/*
-  Optical Heart Rate Detection (PBA Algorithm) using the MAX30105 Breakout
-  By: Nathan Seidle @ SparkFun Electronics
-  Date: October 2nd, 2016
-  https://github.com/sparkfun/MAX30105_Breakout
-
-  This is a demo to show the reading of heart rate or beats per minute (BPM) using
-  a Penpheral Beat Amplitude (PBA) algorithm.
-
-  It is best to attach the sensor to your finger using a rubber band or other tightening
-  device. Humans are generally bad at applying constant pressure to a thing. When you
-  press your finger against the sensor it varies enough to cause the blood in your
-  finger to flow differently which causes the sensor readings to go wonky.
-
-  Hardware Connections (Breakoutboard to Arduino):
-  -5V = 5V (3.3V is allowed)
-  -GND = GND
-  -SDA = A4 (or SDA)
-  -SCL = A5 (or SCL)
-  -INT = Not connected
-
-  The MAX30105 Breakout can handle 5V or 3.3V I2C logic. We recommend powering the board with 5V
-  but it will also run at 3.3V.
-*/
-
 #include <Wire.h>
 #include "MAX30105.h"
 
@@ -46,16 +21,6 @@ int beatAvg;
 #define FILTERTAPS 35
 FIR fir;
 
-// Make two instances of the FIR filter. The first is a 13 element float
-// and the second is a 10 point float. The 13 element filter is a 2 Hz low-pass
-// for a 10 SPS signal and the 10 element is a moving average over one second.
-
-/*
-FIR<float, 13> fir_lp;
-FIR<float, 50> fir_avg;
-FIR<float, 27> fir_hp;
-*/
-// Some data that is a 0.2 Hz sine wave with a 0.3 Hz sine wave noise on it.
 float data[51] = { 0.2, -0.01757378,  0.25261   ,  0.50501472,  0.28169386,
                    0.73591371,  0.67214444,  0.63916107,  1.04340099,  0.75089683,
                    0.97104406,  1.1070092 ,  0.79944834,  1.15681282,  0.95424177,
@@ -115,32 +80,7 @@ void setup()
   particleSensor.setup(); //Configure sensor with default settings
   particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
   particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
-/*
-  float coef_lp[13] = { 660, 470, -1980, -3830, 504, 10027, 15214,
-                        10027, 504, -3830, -1980, 470, 660
-                      };
 
-  // For a moving average we use all ones as coefficients.
-  float coef_avg[50] = {1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.};
-
-  float coef_hp[27] = {-0.0040 ,   0.0097 ,  -0.0074 ,  -0.0094  ,  0.0265  , -0.0173   ,-0.0183,    0.0356,    0.0059 ,  -0.0713 ,   0.0580 ,   0.0920,
-   -0.2981 ,  0.3952   ,-0.2981   , 0.0920  ,  0.0580 ,  -0.0713  ,  0.0059,    0.0356 ,  -0.0183,   -0.0173  ,  0.0265   ,-0.0094, -0.0074    ,0.0097  , -0.0040};
-      
-  // Set the coefficients
-  fir_lp.setFilterCoeffs(coef_lp);
-  fir_avg.setFilterCoeffs(coef_avg);
-    fir_hp.setFilterCoeffs(coef_hp);
-
-  // Set the gain
-  Serial1.print("Low Pass Filter Gain: ");
-  Serial1.println(fir_lp.getGain());
-  Serial1.print("Moving Average Filter Gain: ");
-  Serial1.println(fir_avg.getGain());
-    fir_hp.getGain();
-*/
- /* float coef[FILTERTAPS] ={-0.0040 ,   0.0097 ,  -0.0074 ,  -0.0094  ,  0.0265  , -0.0173   ,-0.0183,    0.0356,    0.0059 ,  -0.0713 ,   0.0580 ,   0.0920,
-   -0.2981 ,  0.3952   ,-0.2981   , 0.0920  ,  0.0580 ,  -0.0713  ,  0.0059,    0.0356 ,  -0.0183,   -0.0173  ,  0.0265   ,-0.0094, -0.0074    ,0.0097  , -0.0040};
-  */
   float coef[FILTERTAPS] = {0.0011,   -0.0048,    0.0093  , -0.0088  , -0.0013 ,   0.0141  , -0.0136  , -0.0053 ,   0.0216  , -0.0079 ,  -0.0287 ,   0.0401,
     0.0074  , -0.0705  ,  0.0502   , 0.1007  , -0.2996,    0.3919  , -0.2996 ,   0.1007   , 0.0502 ,  -0.0705 ,   0.0074 ,   0.0401,
    -0.0287 ,  -0.0079 ,   0.0216  , -0.0053   ,-0.0136  ,  0.0141   ,-0.0013 ,  -0.0088 ,   0.0093  , -0.0048,    0.0011};
@@ -157,26 +97,6 @@ void setup()
 
 void loop()
 {
-  //long irValue = particleSensor.getIR();
-  /*
-    //Serial1.print("FIR:");
-    float FIR_result = fir_lp.processReading(irValue);
-
-    /////////my moving average//////////
-    movingAvgArray[index_AvgArray] = irValue;
-    index_AvgArray++;
-    for (int i = 0; i<movingAvg_HR_DC_step; i++){
-    sum = sum + movingAvgArray[i];
-    }
-    movingAvg_forDC = sum / movingAvg_HR_DC_step;
-    if (index_AvgArray >= 100){
-    index_AvgArray = 0;
-    }
-  */
-  
-    //movingAvg_forDC = 0.99 * movingAvg_forDC + 0.01 * FIR_result;
-    //Serial1.println(irValue );
-    
     for(int i=0; i<SAMPLES; i++)
     {
         microseconds = micros();    //Overflows after around 70 minutes!
@@ -225,32 +145,20 @@ void loop()
       vReal[5] = 0;
       vReal[6] = 0;vReal[7] = 0;
       vReal[8] = 0;
-      double peak = FFT.MajorPeak(vReal, SAMPLES, SAMPLING_FREQUENCY);
+      double peak = FFT.MajorPeak(vReal, SAMPLES, SAMPLING_FREQUENCY); //if other parts of the code takes noticable time, the SAMPLING_FREQUENCY will be changed and it should be considered.
       array4Avg_HR[counter_avg] = peak / 10;  //because at first we said freq = 500 but it is 50
       counter_avg ++;
     }
     numberOfNoSkins = 0;
 
 
-        /*
-    for(int i=0; i<(SAMPLES/2); i++)
-    {
-
-        //Serial.print((i * 1.0 * SAMPLING_FREQUENCY) / SAMPLES, 1);
-        //Serial.print(" ");
-        Serial1.println(vReal[i], 1);    //View only this line in serial plotter to visualize the bins
-    }
-     Serial1.print("Peak: ");
-    Serial1.println(peak);     //Print out what frequency is the most dominant.
-    */
-    
     if (counter_avg == finalHR_AvgSteps){
     
         KickSort<float>::bubbleSort(array4Avg_HR, finalHR_AvgSteps);
         Serial1.println(array4Avg_HR[0]);
         Serial1.println(array4Avg_HR[1]);
         Serial1.println(array4Avg_HR[2]);
-        int result_HR = (array4Avg_HR[0]*0.6 + array4Avg_HR[1]*0.4);// + array4Avg_HR[2]*0.2) * 60;
+        int result_HR = (array4Avg_HR[2]*0.6 + array4Avg_HR[1]*0.4);
         counter_avg = 0;
 
         Serial1.println(result_HR);
